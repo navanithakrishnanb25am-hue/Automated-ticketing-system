@@ -1,4 +1,4 @@
-Automated-ticketing-system.
+# Automated-ticketing-system.
 
 A system that automatically checks with the ticket availablity, books a ticket, creates a qr, gives an id and can also cancel a ticket
 
