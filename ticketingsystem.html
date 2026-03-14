@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Automated Ticketing System</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+
+*{
+box-sizing:border-box;
+font-family:Segoe UI;
+}
+
+/* ANIMATED BACKGROUND */
+
+body{
+margin:0;
+background:linear-gradient(120deg,#dfe9f7,#f7fbff);
+overflow-x:hidden;
+}
+
+body::before{
+content:"";
+position:fixed;
+top:0;
+left:0;
+width:200%;
+height:200%;
+background-image:radial-gradient(#c9d8ef 1px, transparent 1px);
+background-size:30px 30px;
+animation:movebg 25s linear infinite;
+z-index:-1;
+}
+
+@keyframes movebg{
+0%{transform:translate(0,0)}
+100%{transform:translate(-200px,-200px)}
+}
+
+/* HEADER */
+
+.header{
+text-align:center;
+background:white;
+padding:20px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+.header span{
+background:#5d7fa6;
+color:white;
+padding:6px 14px;
+border-radius:20px;
+font-size:13px;
+}
+
+.header h1{
+margin:10px;
+color:#2c4e75;
+}
+
+/* WINDOW */
+
+.window{
+width:1050px;
+margin:30px auto;
+background:white;
+border-radius:12px;
+box-shadow:0 15px 40px rgba(0,0,0,0.2);
+overflow:hidden;
+}
+
+.titlebar{
+background:#2f5e8c;
+color:white;
+padding:10px;
+font-weight:bold;
+}
+
+/* LAYOUT */
+
+.container{
+display:flex;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+width:220px;
+background:#f4f7fb;
+padding:15px;
+border-right:1px solid #ddd;
+}
+
+.sidebar button{
+width:100%;
+padding:12px;
+margin-bottom:12px;
+background:#3b6fa8;
+color:white;
+border:none;
+border-radius:8px;
+cursor:pointer;
+transition:.3s;
+}
+
+.sidebar button:hover{
+background:#2a5584;
+}
+
+/* MAIN */
+
+.main{
+flex:1;
+padding:30px;
+}
+
+.tab{
+display:none;
+}
+
+input{
+padding:10px;
+width:260px;
+margin-bottom:10px;
+border:1px solid #ccc;
+border-radius:6px;
+}
+
+.action{
+background:#27ae60;
+color:white;
+border:none;
+padding:10px 18px;
+border-radius:6px;
+cursor:pointer;
+}
+
+/* SEATS */
+
+.seats{
+display:grid;
+grid-template-columns:repeat(8,40px);
+gap:8px;
+margin-top:20px;
+}
+
+.seat{
+width:40px;
+height:40px;
+background:#cfd8e6;
+border-radius:6px;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+}
+
+.seat.selected{
+background:#27ae60;
+color:white;
+}
+
+/* POPUP */
+
+.popup{
+position:fixed;
+top:0;
+left:0;
+right:0;
+bottom:0;
+display:none;
+align-items:center;
+justify-content:center;
+background:rgba(0,0,0,0.4);
+}
+
+.ticket{
+background:white;
+padding:20px;
+border-radius:10px;
+text-align:center;
+width:320px;
+box-shadow:0 8px 25px rgba(0,0,0,0.3);
+}
+
+.close{
+margin-top:10px;
+padding:8px 20px;
+background:#3b6fa8;
+color:white;
+border:none;
+border-radius:5px;
+cursor:pointer;
+}
+
+/* DASHBOARD */
+
+.cards{
+display:flex;
+gap:20px;
+}
+
+.card{
+flex:1;
+background:#f4f7fb;
+padding:20px;
+border-radius:10px;
+text-align:center;
+}
+
+.card h2{
+margin:0;
+color:#2c4e75;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<span>STEM PROJECT</span>
+<h1>Automated Ticketing System</h1>
+</div>
+
+<div class="window">
+
+<div class="titlebar">
+Railway Ticket Booking Application
+</div>
+
+<div class="container">
+
+<div class="sidebar">
+
+<button onclick="openTab('login')">Login</button>
+<button onclick="openTab('book')">Book Ticket</button>
+<button onclick="openTab('cancel')">Cancel Ticket</button>
+<button onclick="openTab('history')">Booking History</button>
+<button onclick="openTab('dashboard')">Dashboard</button>
+<button onclick="openTab('stats')">Statistics</button>
+<button onclick="openTab('algorithm')">Algorithm</button>
+
+</div>
+
+<div class="main">
+
+<!-- LOGIN -->
+
+<div id="login" class="tab">
+<h2>User Login</h2>
+<input placeholder="Username"><br>
+<input type="password" placeholder="Password"><br>
+<button class="action" onclick="alert('Login Successful')">Login</button>
+</div>
+
+<!-- BOOK -->
+
+<div id="book" class="tab">
+
+<h2>Select Seat</h2>
+
+<input id="name" placeholder="Passenger Name"><br>
+
+<div class="seats" id="seats"></div>
+
+<button class="action" onclick="book()">Book Ticket</button>
+
+</div>
+
+<!-- CANCEL -->
+
+<div id="cancel" class="tab">
+
+<h2>Cancel Ticket</h2>
+
+<input id="cancelID" placeholder="Enter Ticket ID"><br>
+
+<button class="action" onclick="cancelTicket()">Cancel Ticket</button>
+
+</div>
+
+<!-- HISTORY -->
+
+<div id="history" class="tab">
+<h2>Booking History</h2>
+<ul id="historyList"></ul>
+</div>
+
+<!-- DASHBOARD -->
+
+<div id="dashboard" class="tab">
+
+<h2>Admin Dashboard</h2>
+
+<div class="cards">
+
+<div class="card">
+<h2 id="total">64</h2>
+Total Seats
+</div>
+
+<div class="card">
+<h2 id="booked">0</h2>
+Booked
+</div>
+
+<div class="card">
+<h2 id="available">64</h2>
+Available
+</div>
+
+</div>
+
+</div>
+
+<!-- STATS -->
+
+<div id="stats" class="tab">
+<h2>Ticket Statistics</h2>
+<canvas id="chart" width="400"></canvas>
+</div>
+
+<!-- ALGORITHM -->
+
+<div id="algorithm" class="tab">
+
+<h2>System Algorithm</h2>
+
+<ol>
+<li>User Login</li>
+<li>Check Seat Availability</li>
+<li>Select Seat</li>
+<li>Generate Ticket ID</li>
+<li>Store Booking</li>
+<li>Generate QR Ticket</li>
+<li>Display Confirmation</li>
+</ol>
+
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- TICKET POPUP -->
+
+<div class="popup" id="popup">
+
+<div class="ticket">
+
+<h3>Ticket Confirmed</h3>
+
+<p id="ticketID"></p>
+<p id="seatInfo"></p>
+
+<div id="qr"></div>
+
+<button class="action" onclick="downloadPDF()">Download Ticket</button>
+
+<br>
+
+<button class="close" onclick="closePopup()">OK</button>
+
+</div>
+
+</div>
+
+<script>
+
+let TOTAL=64
+let selectedSeat=null
+let currentTicket=null
+
+const seatContainer=document.getElementById("seats")
+
+for(let i=1;i<=64;i++){
+
+let seat=document.createElement("div")
+
+seat.className="seat"
+seat.innerText=i
+
+seat.onclick=()=>{
+
+document.querySelectorAll(".seat").forEach(s=>s.classList.remove("selected"))
+
+seat.classList.add("selected")
+
+selectedSeat=i
+
+}
+
+seatContainer.appendChild(seat)
+
+}
+
+function getBookings(){
+return JSON.parse(localStorage.getItem("bookings")||"[]")
+}
+
+function saveBookings(data){
+localStorage.setItem("bookings",JSON.stringify(data))
+}
+
+function openTab(id){
+
+document.querySelectorAll(".tab").forEach(t=>t.style.display="none")
+
+document.getElementById(id).style.display="block"
+
+if(id==="history") loadHistory()
+if(id==="dashboard") updateDashboard()
+if(id==="stats") drawChart()
+
+}
+
+function book(){
+
+let name=document.getElementById("name").value
+
+if(!selectedSeat){
+alert("Select a seat")
+return
+}
+
+let bookings=getBookings()
+
+let id=Math.floor(Math.random()*900000)+100000
+
+currentTicket=id
+
+bookings.push({id,name,seat:selectedSeat})
+
+saveBookings(bookings)
+
+document.getElementById("ticketID").innerText="Ticket ID : "+id
+document.getElementById("seatInfo").innerText="Seat : "+selectedSeat
+
+document.getElementById("qr").innerHTML =
+'<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=Ticket:'+id+'" />'
+
+document.getElementById("popup").style.display="flex"
+
+updateDashboard()
+
+}
+
+function cancelTicket(){
+
+let id=document.getElementById("cancelID").value
+
+let bookings=getBookings().filter(b=>b.id!=id)
+
+saveBookings(bookings)
+
+alert("Ticket Cancelled")
+
+updateDashboard()
+loadHistory()
+
+}
+
+function loadHistory(){
+
+let list=document.getElementById("historyList")
+list.innerHTML=""
+
+getBookings().forEach(b=>{
+
+let li=document.createElement("li")
+li.innerText="Ticket "+b.id+" | "+b.name+" | Seat "+b.seat
+list.appendChild(li)
+
+})
+
+}
+
+function updateDashboard(){
+
+let booked=getBookings().length
+
+document.getElementById("booked").innerText=booked
+document.getElementById("available").innerText=TOTAL-booked
+
+}
+
+function drawChart(){
+
+let booked=getBookings().length
+let available=TOTAL-booked
+
+new Chart(document.getElementById("chart"),{
+
+type:"doughnut",
+
+data:{
+labels:["Booked","Available"],
+datasets:[{
+data:[booked,available]
+}]
+}
+
+})
+
+}
+
+function downloadPDF(){
+
+const {jsPDF}=window.jspdf
+
+let pdf=new jsPDF()
+
+pdf.text("Railway Ticket",20,20)
+pdf.text("Ticket ID: "+currentTicket,20,40)
+
+pdf.save("ticket.pdf")
+
+}
+
+function closePopup(){
+document.getElementById("popup").style.display="none"
+}
+
+openTab("login")
+
+</script>
+
+</body>
+</html>
