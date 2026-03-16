@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Advanced English Readability Analyzer</title>
 
+<title>English STEM Writing & Readability Analyzer</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -10,10 +10,10 @@
 body{
 font-family:Segoe UI;
 margin:0;
-background:linear-gradient(-45deg,#4facfe,#00f2fe,#6a11cb,#2575fc);
+background:linear-gradient(-45deg,#5f2c82,#49a09d,#4facfe,#00f2fe);
 background-size:400% 400%;
-animation:bg 12s ease infinite;
-color:#333;
+animation:bg 15s infinite;
+color:white;
 }
 
 @keyframes bg{
@@ -23,35 +23,29 @@ color:#333;
 }
 
 .container{
-width:900px;
+width:1000px;
 margin:40px auto;
-background:white;
-padding:25px;
-border-radius:12px;
-box-shadow:0 10px 25px rgba(0,0,0,0.3);
 }
 
 h1{
 text-align:center;
-color:#2c4e75;
 }
 
 textarea{
 width:100%;
 height:160px;
-padding:10px;
-border-radius:6px;
-border:1px solid #ccc;
+border-radius:10px;
+border:none;
+padding:12px;
 font-size:15px;
 }
 
 button{
 margin-top:10px;
 padding:10px 18px;
-background:#2c6ed5;
-color:white;
 border:none;
 border-radius:6px;
+background:white;
 cursor:pointer;
 }
 
@@ -60,32 +54,44 @@ margin-top:20px;
 }
 
 .tabBtn{
-padding:8px 14px;
-margin-right:5px;
+padding:8px 15px;
+margin-right:6px;
 border:none;
-background:#ddd;
 cursor:pointer;
-}
-
-.tabBtn:hover{
-background:#bbb;
 }
 
 .tab{
 display:none;
-margin-top:15px;
+margin-top:20px;
+}
+
+.dashboard{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:15px;
+margin-top:20px;
 }
 
 .card{
-background:#f4f7fb;
-padding:12px;
-border-radius:6px;
-margin-bottom:10px;
+background:rgba(255,255,255,0.2);
+backdrop-filter:blur(10px);
+padding:15px;
+border-radius:10px;
+text-align:center;
 }
 
-.highlight{
-background:yellow;
-font-weight:bold;
+.section{
+margin-top:20px;
+background:rgba(255,255,255,0.2);
+padding:15px;
+border-radius:10px;
+backdrop-filter:blur(10px);
+}
+
+canvas{
+margin-top:20px;
+background:white;
+border-radius:10px;
 }
 
 </style>
@@ -95,48 +101,78 @@ font-weight:bold;
 
 <div class="container">
 
-<h1>Advanced English Readability Analyzer</h1>
+<h1>English STEM Writing & Readability Analyzer</h1>
 
-<textarea id="textInput" placeholder="Paste your paragraph here..."></textarea>
+<textarea id="textInput" placeholder="Paste your paragraph or essay..."></textarea>
 
 <br>
 <button onclick="analyze()">Analyze Text</button>
+<button onclick="downloadReport()">Download Report</button>
+
+<div class="dashboard">
+
+<div class="card">
+<h3 id="words">0</h3>
+<p>Words</p>
+</div>
+
+<div class="card">
+<h3 id="sentences">0</h3>
+<p>Sentences</p>
+</div>
+
+<div class="card">
+<h3 id="grade">0</h3>
+<p>Grade Level</p>
+</div>
+
+<div class="card">
+<h3 id="speech">0</h3>
+<p>Speech Time</p>
+</div>
+
+</div>
 
 <div class="tabs">
-<button class="tabBtn" onclick="openTab('analysis')">Analysis</button>
+
+<button class="tabBtn" onclick="openTab('analysis')">Readability</button>
 <button class="tabBtn" onclick="openTab('charts')">Charts</button>
-<button class="tabBtn" onclick="openTab('simplify')">Simplified Text</button>
+<button class="tabBtn" onclick="openTab('writing')">Writing Tools</button>
+
 </div>
 
 <div id="analysis" class="tab">
 
-<div class="card" id="stats"></div>
-<div class="card" id="readability"></div>
-<div class="card" id="vocab"></div>
-<div class="card" id="reading"></div>
-<div class="card" id="keywords"></div>
-<div class="card" id="difficult"></div>
-<div class="card" id="highlighted"></div>
+<div class="section" id="readability"></div>
+<div class="section" id="vocab"></div>
+<div class="section" id="readingTime"></div>
+<div class="section" id="difficult"></div>
 
 </div>
 
 <div id="charts" class="tab">
 
-<canvas id="wordChart"></canvas>
+<canvas id="chart1"></canvas>
 <br>
-<canvas id="sentenceChart"></canvas>
+<canvas id="chart2"></canvas>
 
 </div>
 
-<div id="simplify" class="tab">
+<div id="writing" class="tab">
 
-<div class="card" id="simpleText"></div>
+<div class="section" id="score"></div>
+<div class="section" id="keywords"></div>
+<div class="section" id="grammar"></div>
+<div class="section" id="essay"></div>
+<div class="section" id="simplified"></div>
 
 </div>
 
 </div>
 
 <script>
+
+let report=""
 
 function openTab(id){
 
@@ -150,12 +186,14 @@ document.getElementById(id).style.display="block"
 function syllables(word){
 
 word=word.toLowerCase()
+
 if(word.length<=3)return 1
 
 word=word.replace(/(?:es|ed|e)$/,'')
 word=word.replace(/^y/,'')
 
 let m=word.match(/[aeiouy]{1,2}/g)
+
 return m?m.length:1
 
 }
@@ -170,24 +208,22 @@ let sentences=text.split(/[.!?]+/).filter(s=>s.trim().length>0)
 let wordCount=words.length
 let sentenceCount=sentences.length
 
+document.getElementById("words").innerText=wordCount
+document.getElementById("sentences").innerText=sentenceCount
+
 let syllableCount=0
 let complex=[]
 
 words.forEach(w=>{
 let s=syllables(w)
 syllableCount+=s
-if(s>=3) complex.push(w)
+if(s>=3)complex.push(w)
 })
-
-let avgSentence=(wordCount/sentenceCount).toFixed(2)
 
 let flesch=206.835-(1.015*(wordCount/sentenceCount))-(84.6*(syllableCount/wordCount))
 let grade=(0.39*(wordCount/sentenceCount))+(11.8*(syllableCount/wordCount))-15.59
 
-document.getElementById("stats").innerHTML=
-"<b>Word Count:</b> "+wordCount+
-"<br><b>Sentence Count:</b> "+sentenceCount+
-"<br><b>Average Sentence Length:</b> "+avgSentence
+document.getElementById("grade").innerText=grade.toFixed(1)
 
 document.getElementById("readability").innerHTML=
 "<b>Flesch Reading Ease:</b> "+flesch.toFixed(2)+
@@ -197,25 +233,52 @@ let vocab="Beginner"
 if(complex.length>10)vocab="Intermediate"
 if(complex.length>20)vocab="Advanced"
 
-document.getElementById("vocab").innerHTML=
-"<b>Vocabulary Level:</b> "+vocab
+document.getElementById("vocab").innerHTML="<b>Vocabulary Level:</b> "+vocab
 
-let time=(wordCount/200).toFixed(2)
+let reading=(wordCount/200).toFixed(2)
+document.getElementById("readingTime").innerHTML="<b>Reading Time:</b> "+reading+" minutes"
 
-document.getElementById("reading").innerHTML=
-"<b>Estimated Reading Time:</b> "+time+" minutes"
+let speech=(wordCount/130).toFixed(2)
+document.getElementById("speech").innerText=speech+" min"
 
 document.getElementById("difficult").innerHTML=
-"<b>Difficult Words:</b><br>"+complex.slice(0,25).join(", ")
+"<b>Difficult Words:</b> "+complex.slice(0,20).join(", ")
 
-let highlighted=text
-complex.slice(0,10).forEach(w=>{
-let reg=new RegExp("\\b"+w+"\\b","gi")
-highlighted=highlighted.replace(reg,"<span class='highlight'>"+w+"</span>")
-})
+calculateScore(wordCount,sentenceCount,grade)
+detectKeywords(words)
+grammarCheck(text)
+essayCheck(sentences)
+simplify(text)
 
-document.getElementById("highlighted").innerHTML=
-"<b>Highlighted Text:</b><br>"+highlighted
+drawCharts(wordCount,complex.length,sentences)
+
+openTab("analysis")
+
+report="Words:"+wordCount+
+"\nSentences:"+sentenceCount+
+"\nGrade:"+grade+
+"\nSpeech:"+speech
+
+}
+
+function calculateScore(words,sentences,grade){
+
+let score=100
+
+if(grade>12)score-=15
+if(words<50)score-=10
+if(sentences<3)score-=10
+
+let level="Excellent"
+if(score<85)level="Good"
+if(score<70)level="Average"
+
+document.getElementById("score").innerHTML=
+"<b>Writing Score:</b> "+score+"/100<br>"+level
+
+}
+
+function detectKeywords(words){
 
 let freq={}
 words.forEach(w=>{
@@ -224,47 +287,97 @@ freq[w]=(freq[w]||0)+1
 })
 
 let sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1])
-
 let keys=sorted.slice(0,5).map(k=>k[0])
 
 document.getElementById("keywords").innerHTML=
 "<b>Keywords:</b> "+keys.join(", ")
 
+}
+
+function grammarCheck(text){
+
+let issues=[]
+
+if(text.match(/I has/gi))issues.push("Use 'I have'")
+if(text.match(/He go/gi))issues.push("Use 'He goes'")
+if(text.match(/She don't/gi))issues.push("Use 'She doesn't'")
+
+if(issues.length==0)issues.push("No common grammar errors found")
+
+document.getElementById("grammar").innerHTML=
+"<b>Grammar Check:</b><br>"+issues.join("<br>")
+
+}
+
+function essayCheck(sentences){
+
+let intro="✔"
+let body="❌"
+let conclusion="❌"
+
+if(sentences.length>=3)body="✔"
+
+let last=sentences[sentences.length-1]||""
+
+if(last.match(/in conclusion|overall|to conclude/i))
+conclusion="✔"
+
+document.getElementById("essay").innerHTML=
+"<b>Essay Structure</b><br>"+
+"Introduction "+intro+"<br>"+
+"Body "+body+"<br>"+
+"Conclusion "+conclusion
+
+}
+
+function simplify(text){
+
 let simple=text
 .replace(/utilize/gi,"use")
-.replace(/commence/gi,"start")
 .replace(/demonstrate/gi,"show")
 .replace(/numerous/gi,"many")
+.replace(/commence/gi,"start")
 
-document.getElementById("simpleText").innerHTML=simple
-
-drawCharts(wordCount,complex.length,sentences)
-
-openTab("analysis")
+document.getElementById("simplified").innerHTML=
+"<b>Simplified Text:</b><br>"+simple
 
 }
 
 function drawCharts(total,complex,sentences){
 
-let simple=total-complex
+new Chart(document.getElementById("chart1"),{
 
-new Chart(document.getElementById("wordChart"),{
 type:"doughnut",
+
 data:{
 labels:["Simple Words","Complex Words"],
-datasets:[{data:[simple,complex]}]
+datasets:[{data:[total-complex,complex]}]
 }
+
 })
 
 let lengths=sentences.map(s=>s.split(" ").length)
 
-new Chart(document.getElementById("sentenceChart"),{
+new Chart(document.getElementById("chart2"),{
+
 type:"bar",
+
 data:{
 labels:lengths.map((_,i)=>"Sentence "+(i+1)),
 datasets:[{label:"Words per Sentence",data:lengths}]
 }
+
 })
+
+}
+
+function downloadReport(){
+
+let blob=new Blob([report],{type:"text/plain"})
+let a=document.createElement("a")
+a.href=URL.createObjectURL(blob)
+a.download="analysis_report.txt"
+a.click()
 
 }
 
