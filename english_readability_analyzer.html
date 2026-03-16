@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Advanced English Readability Analyzer</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family:Segoe UI;
+margin:0;
+background:linear-gradient(-45deg,#4facfe,#00f2fe,#6a11cb,#2575fc);
+background-size:400% 400%;
+animation:bg 12s ease infinite;
+color:#333;
+}
+
+@keyframes bg{
+0%{background-position:0% 50%;}
+50%{background-position:100% 50%;}
+100%{background-position:0% 50%;}
+}
+
+.container{
+width:900px;
+margin:40px auto;
+background:white;
+padding:25px;
+border-radius:12px;
+box-shadow:0 10px 25px rgba(0,0,0,0.3);
+}
+
+h1{
+text-align:center;
+color:#2c4e75;
+}
+
+textarea{
+width:100%;
+height:160px;
+padding:10px;
+border-radius:6px;
+border:1px solid #ccc;
+font-size:15px;
+}
+
+button{
+margin-top:10px;
+padding:10px 18px;
+background:#2c6ed5;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+
+.tabs{
+margin-top:20px;
+}
+
+.tabBtn{
+padding:8px 14px;
+margin-right:5px;
+border:none;
+background:#ddd;
+cursor:pointer;
+}
+
+.tabBtn:hover{
+background:#bbb;
+}
+
+.tab{
+display:none;
+margin-top:15px;
+}
+
+.card{
+background:#f4f7fb;
+padding:12px;
+border-radius:6px;
+margin-bottom:10px;
+}
+
+.highlight{
+background:yellow;
+font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Advanced English Readability Analyzer</h1>
+
+<textarea id="textInput" placeholder="Paste your paragraph here..."></textarea>
+
+<br>
+<button onclick="analyze()">Analyze Text</button>
+
+<div class="tabs">
+<button class="tabBtn" onclick="openTab('analysis')">Analysis</button>
+<button class="tabBtn" onclick="openTab('charts')">Charts</button>
+<button class="tabBtn" onclick="openTab('simplify')">Simplified Text</button>
+</div>
+
+<div id="analysis" class="tab">
+
+<div class="card" id="stats"></div>
+<div class="card" id="readability"></div>
+<div class="card" id="vocab"></div>
+<div class="card" id="reading"></div>
+<div class="card" id="keywords"></div>
+<div class="card" id="difficult"></div>
+<div class="card" id="highlighted"></div>
+
+</div>
+
+<div id="charts" class="tab">
+
+<canvas id="wordChart"></canvas>
+<br>
+<canvas id="sentenceChart"></canvas>
+
+</div>
+
+<div id="simplify" class="tab">
+
+<div class="card" id="simpleText"></div>
+
+</div>
+
+</div>
+
+<script>
+
+function openTab(id){
+
+let tabs=document.querySelectorAll(".tab")
+tabs.forEach(t=>t.style.display="none")
+
+document.getElementById(id).style.display="block"
+
+}
+
+function syllables(word){
+
+word=word.toLowerCase()
+if(word.length<=3)return 1
+
+word=word.replace(/(?:es|ed|e)$/,'')
+word=word.replace(/^y/,'')
+
+let m=word.match(/[aeiouy]{1,2}/g)
+return m?m.length:1
+
+}
+
+function analyze(){
+
+let text=document.getElementById("textInput").value
+
+let words=text.match(/\b\w+\b/g)||[]
+let sentences=text.split(/[.!?]+/).filter(s=>s.trim().length>0)
+
+let wordCount=words.length
+let sentenceCount=sentences.length
+
+let syllableCount=0
+let complex=[]
+
+words.forEach(w=>{
+let s=syllables(w)
+syllableCount+=s
+if(s>=3) complex.push(w)
+})
+
+let avgSentence=(wordCount/sentenceCount).toFixed(2)
+
+let flesch=206.835-(1.015*(wordCount/sentenceCount))-(84.6*(syllableCount/wordCount))
+let grade=(0.39*(wordCount/sentenceCount))+(11.8*(syllableCount/wordCount))-15.59
+
+document.getElementById("stats").innerHTML=
+"<b>Word Count:</b> "+wordCount+
+"<br><b>Sentence Count:</b> "+sentenceCount+
+"<br><b>Average Sentence Length:</b> "+avgSentence
+
+document.getElementById("readability").innerHTML=
+"<b>Flesch Reading Ease:</b> "+flesch.toFixed(2)+
+"<br><b>Grade Level:</b> "+grade.toFixed(2)
+
+let vocab="Beginner"
+if(complex.length>10)vocab="Intermediate"
+if(complex.length>20)vocab="Advanced"
+
+document.getElementById("vocab").innerHTML=
+"<b>Vocabulary Level:</b> "+vocab
+
+let time=(wordCount/200).toFixed(2)
+
+document.getElementById("reading").innerHTML=
+"<b>Estimated Reading Time:</b> "+time+" minutes"
+
+document.getElementById("difficult").innerHTML=
+"<b>Difficult Words:</b><br>"+complex.slice(0,25).join(", ")
+
+let highlighted=text
+complex.slice(0,10).forEach(w=>{
+let reg=new RegExp("\\b"+w+"\\b","gi")
+highlighted=highlighted.replace(reg,"<span class='highlight'>"+w+"</span>")
+})
+
+document.getElementById("highlighted").innerHTML=
+"<b>Highlighted Text:</b><br>"+highlighted
+
+let freq={}
+words.forEach(w=>{
+w=w.toLowerCase()
+freq[w]=(freq[w]||0)+1
+})
+
+let sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1])
+
+let keys=sorted.slice(0,5).map(k=>k[0])
+
+document.getElementById("keywords").innerHTML=
+"<b>Keywords:</b> "+keys.join(", ")
+
+let simple=text
+.replace(/utilize/gi,"use")
+.replace(/commence/gi,"start")
+.replace(/demonstrate/gi,"show")
+.replace(/numerous/gi,"many")
+
+document.getElementById("simpleText").innerHTML=simple
+
+drawCharts(wordCount,complex.length,sentences)
+
+openTab("analysis")
+
+}
+
+function drawCharts(total,complex,sentences){
+
+let simple=total-complex
+
+new Chart(document.getElementById("wordChart"),{
+type:"doughnut",
+data:{
+labels:["Simple Words","Complex Words"],
+datasets:[{data:[simple,complex]}]
+}
+})
+
+let lengths=sentences.map(s=>s.split(" ").length)
+
+new Chart(document.getElementById("sentenceChart"),{
+type:"bar",
+data:{
+labels:lengths.map((_,i)=>"Sentence "+(i+1)),
+datasets:[{label:"Words per Sentence",data:lengths}]
+}
+})
+
+}
+
+</script>
+
+</body>
+</html>
