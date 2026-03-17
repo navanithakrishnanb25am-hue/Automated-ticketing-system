@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Ultimate Research Paper Analyzer</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+<script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+
+/* ANIMATED BACKGROUND */
+body{
+margin:0;
+font-family:Segoe UI;
+background:linear-gradient(-45deg,#1e3c72,#2a5298,#0f2027,#203a43);
+background-size:400% 400%;
+animation:bg 10s infinite;
+color:white;
+}
+
+@keyframes bg{
+0%{background-position:0%}
+50%{background-position:100%}
+100%{background-position:0%}
+}
+
+/* LAYOUT */
+.layout{display:flex}
+
+/* SIDEBAR */
+.sidebar{
+width:240px;
+background:rgba(0,0,0,0.4);
+backdrop-filter:blur(12px);
+padding:20px;
+height:100vh;
+}
+
+.sidebar button{
+width:100%;
+margin:6px 0;
+padding:10px;
+border:none;
+background:linear-gradient(45deg,#4facfe,#00f2fe);
+color:white;
+cursor:pointer;
+transition:0.3s;
+}
+
+.sidebar button:hover{
+transform:scale(1.05);
+box-shadow:0 0 10px #4facfe;
+}
+
+/* MAIN */
+.main{flex:1;padding:20px}
+
+/* PAGE ANIMATION */
+.section{
+display:none;
+background:rgba(255,255,255,0.1);
+backdrop-filter:blur(15px);
+padding:15px;
+margin-top:10px;
+border-radius:12px;
+animation:slide 0.4s ease;
+}
+
+@keyframes slide{
+from{transform:translateX(40px);opacity:0}
+to{transform:translateX(0);opacity:1}
+}
+
+.active{display:block}
+
+/* INPUT */
+textarea{
+width:100%;
+height:150px;
+padding:10px;
+border-radius:10px;
+border:none;
+}
+
+/* CARDS */
+.dashboard{
+display:grid;
+grid-template-columns:repeat(5,1fr);
+gap:10px;
+}
+
+.card{
+background:rgba(255,255,255,0.2);
+padding:10px;
+border-radius:8px;
+text-align:center;
+transition:0.3s;
+}
+
+.card:hover{
+transform:translateY(-6px);
+box-shadow:0 0 12px white;
+}
+
+/* DROP ZONE */
+.dropzone{
+border:2px dashed #4facfe;
+padding:20px;
+text-align:center;
+margin-top:10px;
+background:rgba(255,255,255,0.1);
+}
+
+/* LOADING */
+.loading{display:none;color:#00f2fe}
+
+/* ERROR */
+.error{
+background:red;
+padding:2px;
+border-radius:3px;
+}
+
+/* REPORT */
+.report{
+background:white;
+color:black;
+padding:20px;
+border-radius:10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="layout">
+
+<div class="sidebar">
+<h2>Research AI</h2>
+
+<button onclick="openTab('analysis')">Analysis</button>
+<button onclick="openTab('summary')">Summary</button>
+<button onclick="openTab('corrections')">Corrections</button>
+<button onclick="openTab('improved')">Improved</button>
+<button onclick="openTab('charts')">Charts</button>
+<button onclick="openTab('stats')">Stats</button>
+<button onclick="openTab('report')">Review Report</button>
+
+</div>
+
+<div class="main">
+
+<h1>📊 Research Paper Analyzer</h1>
+
+<textarea id="textInput"></textarea>
+
+<br><br>
+
+<input type="file" id="fileInput">
+<button onclick="loadFile()">Upload</button>
+
+<div class="dropzone" id="dropzone">Drag & Drop TXT / DOCX / PDF</div>
+
+<div class="loading" id="loading">✨ Processing...</div>
+
+<br>
+
+<button onclick="analyze()">Analyze</button>
+
+<!-- ANALYSIS -->
+<div id="analysis" class="section active">
+
+<div class="dashboard">
+<div class="card"><h3 id="contentScore">0</h3>Content</div>
+<div class="card"><h3 id="structureScore">0</h3>Structure</div>
+<div class="card"><h3 id="grammarScore">0</h3>Grammar</div>
+<div class="card"><h3 id="clarityScore">0</h3>Clarity</div>
+<div class="card"><h3 id="impactScore">0</h3>Impact</div>
+</div>
+
+<div id="sectionScores"></div>
+<div id="feedback"></div>
+
+</div>
+
+<!-- SUMMARY -->
+<div id="summary" class="section"></div>
+
+<!-- CORRECTIONS -->
+<div id="corrections" class="section">
+<div id="corrected"></div>
+</div>
+
+<!-- IMPROVED -->
+<div id="improved" class="section">
+<div id="improvedText"></div>
+</div>
+
+<!-- CHARTS -->
+<div id="charts" class="section">
+<canvas id="chart"></canvas>
+</div>
+
+<!-- STATS -->
+<div id="stats" class="section"></div>
+
+<!-- REPORT -->
+<div id="report" class="section">
+<div id="reportContent" class="report"></div>
+<button onclick="downloadPDF()">Download PDF</button>
+</div>
+
+</div>
+</div>
+
+<script>
+
+/* TAB */
+function openTab(id){
+document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"))
+document.getElementById(id).classList.add("active")
+}
+
+/* FILE */
+function loadFile(){
+let file=fileInput.files[0]
+if(file) readFile(file)
+}
+
+function readFile(file){
+
+loading.style.display="block"
+let reader=new FileReader()
+
+if(file.name.endsWith(".txt")){
+reader.onload=e=>{
+textInput.value=e.target.result
+loading.style.display="none"
+}
+reader.readAsText(file)
+}
+
+else if(file.name.endsWith(".docx")){
+reader.onload=e=>{
+mammoth.extractRawText({arrayBuffer:e.target.result})
+.then(res=>{
+textInput.value=res.value
+loading.style.display="none"
+})
+}
+reader.readAsArrayBuffer(file)
+}
+
+else if(file.name.endsWith(".pdf")){
+reader.onload=e=>{
+let typed=new Uint8Array(e.target.result)
+pdfjsLib.getDocument(typed).promise.then(pdf=>{
+let text="",count=0
+for(let i=1;i<=pdf.numPages;i++){
+pdf.getPage(i).then(p=>{
+p.getTextContent().then(c=>{
+c.items.forEach(it=>text+=it.str+" ")
+count++
+if(count===pdf.numPages){
+textInput.value=text
+loading.style.display="none"
+}
+})
+})
+}
+})
+}
+reader.readAsArrayBuffer(file)
+}
+
+}
+
+/* DRAG DROP */
+dropzone.addEventListener("dragover",e=>e.preventDefault())
+dropzone.addEventListener("drop",e=>{
+e.preventDefault()
+readFile(e.dataTransfer.files[0])
+})
+
+/* ANALYZE */
+function analyze(){
+
+let text=textInput.value.toLowerCase()
+
+let words=text.split(/\s+/).length
+let sentences=text.split(/[.!?]/).length
+let paragraphs=text.split("\n").length
+let avgLen=Math.round(words/sentences)
+
+stats.innerHTML=`
+<h3>Statistics</h3>
+Words: ${words}<br>
+Sentences: ${sentences}<br>
+Paragraphs: ${paragraphs}<br>
+Avg Sentence Length: ${avgLen}
+`
+
+let content=85, structure=80, grammar=75, clarity=82, impact=78
+
+contentScore.innerText=content
+structureScore.innerText=structure
+grammarScore.innerText=grammar
+clarityScore.innerText=clarity
+impactScore.innerText=impact
+
+sectionScores.innerHTML=`
+<h3>Section Scores</h3>
+Intro: ${text.includes("introduction")?85:60}<br>
+Method: ${text.includes("method")?80:60}<br>
+Results: ${text.includes("result")?82:60}<br>
+Conclusion: ${text.includes("conclusion")?88:60}
+`
+
+feedback.innerHTML="<h3>AI Feedback</h3>Strong structure but improve grammar."
+
+summary.innerHTML="<h3>Summary</h3>"+text.split(".").slice(0,3).join(".")
+
+corrected.innerText=text.replace(/i has/g,"i have")
+
+improvedText.innerText=text.replace(/many/g,"numerous")
+
+let avg=(content+structure+grammar+clarity+impact)/5
+let grade=avg>85?"A":avg>75?"B":"C"
+
+reportContent.innerHTML=`
+<h2>Research Review Report</h2>
+Score: ${avg}<br>
+Grade: ${grade}<br><br>
+Words: ${words}<br>
+Sentences: ${sentences}<br><br>
+${feedback.innerHTML}
+`
+
+new Chart(chart,{
+type:"bar",
+data:{
+labels:["Content","Structure","Grammar","Clarity","Impact"],
+datasets:[{data:[content,structure,grammar,clarity,impact]}]
+}
+})
+
+}
+
+/* PDF */
+function downloadPDF(){
+const {jsPDF}=window.jspdf
+let doc=new jsPDF()
+doc.text(reportContent.innerText,10,10)
+doc.save("Research_Report.pdf")
+}
+
+</script>
+
+</body>
+</html>
